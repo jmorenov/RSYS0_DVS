@@ -5,51 +5,51 @@ from typing import List
 import openpyxl
 
 
-def list_csv_directory() -> List[str]:
+def list_txts_directory() -> List[tuple[str, str]]:
     files = []
 
-    dir_path = 'CSV'
+    dir_path = 'TXTS'
     for path in os.listdir(dir_path):
-        if os.path.isfile(os.path.join(dir_path, path)) and path.endswith('.csv'):
-            files.append(os.path.join(dir_path, path))
+        if os.path.isfile(os.path.join(dir_path, path)) and path.endswith('.TXT'):
+            files.append((os.path.join(dir_path, path), path))
 
     return files
 
 
-def open_excel():
-    workbook = openpyxl.load_workbook('020_Fatigue_Frames_Selection_Class.xlsx')
-    worksheet = workbook['Spectra_Results']
-
-    return workbook, worksheet
+def open_excel(workbook, txt_file_name: str):
+    return workbook.create_sheet(txt_file_name)
 
 
-def insert_data_in_sheet(worksheet, cell, text) -> None:
-    worksheet[cell] = text
+def insert_data_in_sheet(worksheet, text) -> None:
+    worksheet.append(text)
 
 
-def read_csv(file_name) -> List[str]:
-    with open(file_name, newline='') as csvfile:
-        csvdata = csv.reader(csvfile, delimiter=';', quotechar='|')
-        csv_text = []
+def read_txt(file_name: str) -> List[List[float]]:
+    with open(file_name, 'r', newline='') as txtfile:
+        txt_lines = txtfile.readlines()
+        text_rows = []
 
-        for row in csvdata:
-            csv_text.append(row[1])
+        for line in txt_lines:
+            if line.startswith('    ') and line.startswith('    NODE') is False:
+                row_txt = line.split('    ')
+                row_float = [float(x) for x in row_txt if x != '']
+                text_rows.append(row_float)
 
-        return csv_text
+        return text_rows
 
 
 if __name__ == '__main__':
-    csv_files = list_csv_directory()
-    workbook, worksheet = open_excel()
-    index = 3
+    workbook = openpyxl.Workbook(write_only=True)
+    txts_files = list_txts_directory()
 
-    for csv_file in csv_files:
-        csv_data = read_csv(csv_file)
-        row = 0
-        for column in ['B', 'C', 'D', 'E', 'F']:
-            insert_data_in_sheet(worksheet, column + str(index), csv_data[row])
-            row += 1
+    for txt_file in txts_files:
+        txt_path, txt_name = txt_file
+        worksheet = open_excel(workbook, txt_name)
+        txt_data = read_txt(txt_path)
 
-        index += 1
+        insert_data_in_sheet(worksheet, ['NODE', 'SX', 'SY', 'SZ', 'SXY', 'SYZ', 'SXZ'])
+
+        for row in txt_data:
+            insert_data_in_sheet(worksheet, row)
 
     workbook.save('test.xlsx')
